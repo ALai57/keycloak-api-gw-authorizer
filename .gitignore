@@ -1,0 +1,13 @@
+.DS_Store
+.idea
+*.log
+tmp/
+
+__pycache__*
+.terraform*
+
+dist*
+awsbundle*
+myenv*
+
+iac/terraform.tfstate*
