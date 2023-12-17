@@ -37,7 +37,13 @@ def validate_claims(token):
 
 
 def lambda_handler(event, context):
-    encoded_token = event['authorizationToken']
+    if not event['authorizationToken'].startswith('Bearer '):
+        raise Exception('Malformed token. Expecting Authorization: Bearer XXXX')
+
+    tokens = event['authorizationToken'].split(' ')
+
+    prefix = tokens[0] # Should be Bearer
+    encoded_token = tokens[1]
     print('Attempting to decode token')
 
     try:
