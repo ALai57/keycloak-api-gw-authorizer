@@ -1,14 +1,17 @@
+locals {
+  function_name="keycloak-api-gateway-authorizer"
+}
 
 resource "aws_lambda_function" "authorizer" {
   filename      = "../dist/keycloak-authorizer.zip"
-  function_name = "keycloak-api-gateway-authorizer"
+  function_name = local.function_name
   role          = aws_iam_role.iam_for_lambda.arn
   handler       = "authorizer.lambda_handler"
 
   source_code_hash = filebase64sha256("../dist/keycloak-authorizer.zip") #data.archive_file.lambda.output_base64sha256
 
   runtime = "python3.10"
-  depends_on = [aws_iam_role.iam_for_lambda]
+  depends_on = [aws_iam_role.iam_for_lambda, aws_cloudwatch_log_group.function_log_group]
 }
 
 
@@ -35,7 +38,7 @@ resource "aws_iam_role" "iam_for_lambda" {
 ## Logging
 #######################################################
 resource "aws_cloudwatch_log_group" "function_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
+  name              = "/aws/lambda/${local.function_name}"
   retention_in_days = 7
   lifecycle {
     prevent_destroy = false
