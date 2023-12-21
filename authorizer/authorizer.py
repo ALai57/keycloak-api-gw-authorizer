@@ -35,41 +35,54 @@ def validate_claims(token):
     ## etc
     pass
 
-
-def lambda_handler(event, context):
-    if not event['authorizationToken'].startswith('Bearer '):
-        raise Exception('Malformed token. Expecting Authorization: Bearer XXXX')
-
-    tokens = event['authorizationToken'].split(' ')
-
+def extract_jwt(authorization_token):
+    tokens = authorization_token.split(' ')
     prefix = tokens[0] # Should be Bearer
     encoded_token = tokens[1]
-    print('Attempting to decode token')
+    return encoded_token
+
+def lambda_handler(event, context):
+    config = parse_method_arn(event['methodArn'])
+
+    if not event['authorizationToken'].startswith('Bearer '):
+        policy = AuthPolicy(f"user|unknown", config)
+        policy.denyAllMethods()
+        return policy.build({"errorMessage": f"Malformed token. Expecting Authorization: Bearer XXXX. Got \"{event['authorizationToken'][:10]}...\""})
+
+    encoded_token = extract_jwt(event['authorizationToken'])
+    decoded_token = None
 
     try:
+        print('Attempting to decode token')
         decoded_token = validate_token_signature(encoded_token) if event.get('ENV') != 'test' else event.get('TOKEN')
+        print('Success decoding token')
 
+        print('Validating token')
         validate_claims(decoded_token)
+        print('Success validating token')
 
-        # Build policy
         roles = decoded_token.get('realm_access').get('roles')
+        policy = AuthPolicy(f"user|{decoded_token.get('email')}|{decoded_token.get('sid')}", config)
+        policy.denyAllMethods()
         if roles and ('andrewslai.com:admin' in roles):
-            print('Found roles')
-            config = parse_method_arn(event['methodArn'])
-            policy = AuthPolicy(f"user|{decoded_token.get('email')}|{decoded_token.get('sid')}", config)
+            print(f"Found roles: {roles}")
             policy.allowAllMethods()
-            #policy.allowMethod(HttpVerb.GET, '/pets/*')
-            return policy.build({'key': 'value',})
+            return policy.build({})
         else:
             print(f"No roles associated with user: {decoded_token.get('email')}")
-            raise Exception('Unauthorized')
+            return policy.build({"errorMessage": "User doesn't have correct role."})
+
+    except jwt.DecodeError as ex:
+        print('Unable to decode token')
+        policy = AuthPolicy(f"user|unknown", config)
+        policy.denyAllMethods()
+        return policy.build({"errorMessage": "Unable to decode token. Got: " + repr(ex)})
 
     except Exception as ex:
-        print('Unable to decode token')
-        raise ex
-
-
-
+        print('Unknown error')
+        policy = AuthPolicy(f"user|unknown", config)
+        policy.denyAllMethods()
+        return policy.build({"errorMessage": "Unexpected error. Got: " + repr(ex)})
 
 class HttpVerb:
     GET = 'GET'

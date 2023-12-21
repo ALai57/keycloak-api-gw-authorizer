@@ -59,7 +59,7 @@ class TestLambdaHandler:
     def test_happy_path(self):
         assert {
             'principalId'    : 'user|andrew.s.lai5@gmail.com|e07195a0-a1b7-4552-b77f-140ee0bf7fc0',
-            'context'        : {'key': 'value',},
+            'context'        : {},
             'policyDocument' : {'Statement' : [{'Action'   : 'execute-api:Invoke',
                                                 'Effect'   : 'Allow',
                                                 'Resource' : ['arn:aws:execute-api:us-east-1:123456789012:abcdef123/test/*/*']}],
@@ -73,30 +73,36 @@ class TestLambdaHandler:
 
 
     def test_malformed_token(self):
-        with pytest.raises(Exception):
-            auth.lambda_handler({'methodArn': EXAMPLE_ARN,
-                                 'authorizationToken': 'NOT Bearer XXXX',
-                                 'ENV': 'test',
-                                 'TOKEN': {
-                                     'exp': 1702780664,
-                                     'iat': 1702773464,
-                                     'auth_time': 1702773463,
-                                     'realm_access': {'roles': ['caheriaguilar.com:admin',
-                                                                'andrewslai.com:admin']},
-                                     'email': 'andrew.s.lai5@gmail.com'}},
-                                {})
-        pass
+        assert {'context':
+                {'error':
+                 {'messageString': 'Malformed token. Expecting Authorization: Bearer XXXX. Got "NOT Bearer..."',
+                  }
+                 }
+                } == auth.lambda_handler({'methodArn': EXAMPLE_ARN,
+                                          'authorizationToken': 'NOT Bearer XXXX',
+                                          'ENV': 'test',
+                                          'TOKEN': {
+                                              'exp': 1702780664,
+                                              'iat': 1702773464,
+                                              'auth_time': 1702773463,
+                                              'realm_access': {'roles': ['caheriaguilar.com:admin',
+                                                                         'andrewslai.com:admin']},
+                                              'email': 'andrew.s.lai5@gmail.com'}},
+                                         {})
 
     def test_invalid_role(self):
-        with pytest.raises(Exception):
-            auth.lambda_handler({'methodArn': EXAMPLE_ARN,
-                                 'authorizationToken': EXAMPLE_TOKEN,
-                                 'ENV': 'test',
-                                 'TOKEN': {
-                                     'exp': 1702780664,
-                                     'iat': 1702773464,
-                                     'auth_time': 1702773463,
-                                     'realm_access': {'roles': ['caheriaguilar.com:admin',]},
-                                     'email': 'andrew.s.lai5@gmail.com'}},
-                                {})
-        pass
+        assert {'context':
+                {'error':
+                 {'messageString': "User doesn't have correct role."
+                  }
+                 }
+                } == auth.lambda_handler({'methodArn': EXAMPLE_ARN,
+                                          'authorizationToken': EXAMPLE_TOKEN,
+                                          'ENV': 'test',
+                                          'TOKEN': {
+                                              'exp': 1702780664,
+                                              'iat': 1702773464,
+                                              'auth_time': 1702773463,
+                                              'realm_access': {'roles': ['caheriaguilar.com:admin',]},
+                                              'email': 'andrew.s.lai5@gmail.com'}},
+                                         {})
