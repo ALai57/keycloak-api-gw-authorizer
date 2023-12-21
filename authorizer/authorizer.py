@@ -62,14 +62,15 @@ def lambda_handler(event, context):
         print('Success validating token')
 
         roles = decoded_token.get('realm_access').get('roles')
-        policy = AuthPolicy(f"user|{decoded_token.get('email')}|{decoded_token.get('sid')}", config)
-        policy.denyAllMethods()
         if roles and ('andrewslai.com:admin' in roles):
             print(f"Found roles: {roles}")
+            policy = AuthPolicy(f"user|{decoded_token.get('email')}|{decoded_token.get('sid')}", config)
             policy.allowAllMethods()
             return policy.build({})
         else:
             print(f"No roles associated with user: {decoded_token.get('email')}")
+            policy = AuthPolicy(f"user|{decoded_token.get('email')}|{decoded_token.get('sid')}", config)
+            policy.denyAllMethods()
             return policy.build({"errorMessage": "User doesn't have correct role."})
 
     except jwt.DecodeError as ex:
