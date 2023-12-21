@@ -61,6 +61,38 @@ This Lambda returns custom fields in the context with more details about the
 authorization error.  However, it is the consumer's responsibility to update the
 API Gateway Responses to make use of the context variables.
 
+Example Terraform for API Gateway responses that display the Authorizer error messages below:
+```
+resource "aws_api_gateway_gateway_response" "unauthorized" {
+  rest_api_id   = aws_api_gateway_rest_api.go_test_gateway.id
+  status_code   = "401"
+  response_type = "UNAUTHORIZED"
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.authorizer.errorMessage}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "access_denied" {
+  rest_api_id   = aws_api_gateway_rest_api.go_test_gateway.id
+  status_code   = "403"
+  response_type = "ACCESS_DENIED"
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.authorizer.errorMessage}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "default_4xx" {
+  rest_api_id   = aws_api_gateway_rest_api.go_test_gateway.id
+  response_type = "DEFAULT_4XX"
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.authorizer.errorMessage}"
+  }
+}
+```
+
 See the AWS documentation on context variables for more details.
 https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html#context-variable-reference
 

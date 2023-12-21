@@ -33,6 +33,17 @@ resource "aws_iam_role" "iam_for_lambda" {
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 
+resource "aws_lambda_permission" "apigw_authorizer" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.authorizer.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # The /*/* portion grants access from any method on any resource
+  # within any API gateway. This allows the Authorizer to be used
+  # by any API GW.
+  source_arn = "arn:aws:execute-api:us-east-1:758589815425:*/*/*"
+}
 
 #######################################################
 ## Logging
